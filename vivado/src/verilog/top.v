@@ -2,9 +2,10 @@
 
 `timescale 1ns / 1ps
 
-`define ZYNQ_CLK_PERIOD  8.0
-`define RC_CLK_MULT      2048.0
-`define RC_CLK_DIVIDE   15625.0
+`define ZYNQ_CLK_PERIOD   8.0
+`define RC_CLK_MULT       39.125
+`define RC_CLK_DIVIDE     49.750
+`define RC_CLK_DIVIDE_CTR 6
 
 
 module top
@@ -256,7 +257,7 @@ module top
     .CLKOUT5_PHASE(0.0),
     .CLKOUT6_PHASE(0.0),
     .CLKOUT4_CASCADE("FALSE"),
-    .DIVCLK_DIVIDE(1),
+    .DIVCLK_DIVIDE(`RC_CLK_DIVIDE_CTR),
     .REF_JITTER1(0.0),
     .STARTUP_WAIT("FALSE")
   ) MMCME2_BASE_inst (
