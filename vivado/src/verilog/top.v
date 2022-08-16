@@ -218,7 +218,7 @@ module top
    .axi_irq(irq),
 
    .put_rx_rxp(rxp),
-   .put_rx_rxn(rxn),
+   .put_rx_rxn(rxn)
   );
   IBUFG ibufg_gclk (.I(clk), .O(gclk_i));
   BUFG  bufg_host_clk (.I(host_clk_i), .O(host_clk));
