@@ -1,0 +1,6 @@
+the_ROM_image:
+{
+  [bootloader]boot/zynq_fsbl.elf
+  zynq_e1/zynq_e1.runs/impl_1/top.bit
+  boot/u-boot.elf
+}
