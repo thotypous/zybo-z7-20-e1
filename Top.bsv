@@ -9,10 +9,6 @@ import GetPut_Aux::*;
 import Semi_FIFOF::*;
 
 import AXI4_Types::*;
-import UART::*;
-
-typedef 8 NumSerialLinks;
-typedef Bit#(TLog#(NumSerialLinks)) SerialLink;
 
 typedef 12   Wd_Slave_Id;
 typedef 32   Wd_Addr;
@@ -29,27 +25,28 @@ typedef Bit#(Wd_Addr) Addr;
 
 interface TopIfc;
     interface AXI4_IFC axi;
-    (* prefix="serial" *)
-    interface Vector#(NumSerialLinks, UartRxWires) rx_wires;
-    (* prefix="serial" *)
-    interface Vector#(NumSerialLinks, UartTxWires) tx_wires;
+    (*always_ready,always_enabled*)
+    method Action put_rx(Bit#(1) rxp, Bit#(1) rxn);
 endinterface
 
 (* synthesize *)
 module mkTop(TopIfc);
-    Vector#(NumSerialLinks, FIFOF#(Byte)) rxFifos <- replicateM(mkFIFOF);
-    Vector#(NumSerialLinks, FIFOF#(Byte)) txFifos <- replicateM(mkSizedFIFOF(2048));
-    FIFOF#(Tuple2#(SerialLink, Byte)) rxFifo <- mkSizedFIFOF(16384);
-
-    Vector#(NumSerialLinks, UartRx) rxs <- replicateM(mkUartRx);
-    Vector#(NumSerialLinks, UartTx) txs <- replicateM(mkUartTx);
-
-    Reg#(SerialLink) rx_turn <- mkReg(0);
+    FIFOF#(Bit#(2)) rxFifo <- mkSizedFIFOF(100000);
+    Wire#(Bit#(2)) rxFifoEnqW <- mkWire;
+    Reg#(Bool) overflownOnce <- mkReg(False);
 
     AXI4_Slave_Xactor_IFC #(Wd_Slave_Id,
                             Wd_Addr,
                             Wd_Slave_Data,
                             Wd_User) slave_xactor  <- mkAXI4_Slave_Xactor;
+
+    rule rxFifo_enq(!overflownOnce);
+        rxFifo.enq(rxFifoEnqW);
+    endrule
+
+    rule rxFifo_flag_overlow(!rxFifo.notFull);
+        overflownOnce <= True;
+    endrule
 
     rule slave_rd;
         let rd_addr <- pop_o(slave_xactor.o_rd_addr);
@@ -80,8 +77,8 @@ module mkTop(TopIfc);
 
         let data = wr_data.wdata;
         let addr = wr_addr.awaddr[11:2];
-        SerialLink linkidx = truncate(addr);
-        txFifos[linkidx].enq(truncate(data));
+
+        // TODO: use data, addr for something
 
         AXI4_Wr_Resp#(Wd_Slave_Id, Wd_User)
         wr_resp = AXI4_Wr_Resp {bid:   wr_addr.awid,
@@ -91,26 +88,12 @@ module mkTop(TopIfc);
         slave_xactor.i_wr_resp.enq(wr_resp);
     endrule
 
-    for (Integer i = 0; i < valueOf(NumSerialLinks); i = i + 1) begin
-        mkConnection(toGet(txFifos[i]), txs[i].tx);
-        mkConnection(rxs[i].rx, toPut(rxFifos[i]));
-        rule rx_round_robin (rx_turn == fromInteger(i));
-            if (rxFifos[i].notEmpty) begin
-                rxFifo.enq(tuple2(rx_turn, rxFifos[i].first));
-                rxFifos[i].deq;
-            end
-            rx_turn <= rx_turn + 1;
-        endrule
-    end
-
-    function UartTxWires getTxWires(UartTx ifc) = ifc.wires;
-    function UartRxWires getRxWires(UartRx ifc) = ifc.wires;
-
     interface AXI4_IFC axi;
         interface slave = slave_xactor.axi_side;
         method irq = rxFifo.notEmpty ? 1 : 0;
     endinterface
-
-    interface rx_wires = map(getRxWires, rxs);
-    interface tx_wires = map(getTxWires, txs);
+    
+    method Action put_rx(Bit#(1) rxp, Bit#(1) rxn);
+        rxFifoEnqW <= {rxp, rxn};
+    endmethod
 endmodule
