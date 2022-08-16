@@ -115,8 +115,8 @@ create_clock -add -name sys_clk_pin -period 8.00 -waveform {0 4} [get_ports { cl
 
 ##Pmod Header JB (Zybo Z7-20 only)
 #set_property -dict { PACKAGE_PIN V8    IOSTANDARD LVCMOS33     } [get_ports { jb[0] }]; #IO_L15P_T2_DQS_13 Sch=jb_p[1]		
-#set_property -dict { PACKAGE_PIN W8    IOSTANDARD LVCMOS33     } [get_ports { jb[1] }]; #IO_L15N_T2_DQS_13 Sch=jb_n[1]
-#set_property -dict { PACKAGE_PIN U7    IOSTANDARD LVCMOS33     } [get_ports { jb[2] }]; #IO_L11P_T1_SRCC_13 Sch=jb_p[2]
+set_property -dict { PACKAGE_PIN W8    IOSTANDARD LVCMOS33     } [get_ports { txp }]; #IO_L15N_T2_DQS_13 Sch=jb_n[1]         
+set_property -dict { PACKAGE_PIN U7    IOSTANDARD LVCMOS33     } [get_ports { txn }]; #IO_L11P_T1_SRCC_13 Sch=jb_p[2]   
 #set_property -dict { PACKAGE_PIN V7    IOSTANDARD LVCMOS33     } [get_ports { jb[3] }]; #IO_L11N_T1_SRCC_13 Sch=jb_n[2]
 set_property -dict { PACKAGE_PIN Y7    IOSTANDARD LVCMOS33     } [get_ports { rxp }]; #IO_L13P_T2_MRCC_13 Sch=jb_p[3]
 set_property -dict { PACKAGE_PIN Y6    IOSTANDARD LVCMOS33     } [get_ports { rxn }]; #IO_L13N_T2_MRCC_13 Sch=jb_n[3]
