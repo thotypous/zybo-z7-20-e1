@@ -4,6 +4,8 @@ import GetPut::*;
 import ClientServer::*;
 import Connectable::*;
 import Vector::*;
+import StmtFSM::*;
+import TriState::*;
 
 import GetPut_Aux::*;
 import Semi_FIFOF::*;
@@ -27,6 +29,8 @@ interface TopIfc;
     interface AXI4_IFC axi;
     (*always_ready,always_enabled*)
     method Action put_rx(Bit#(1) rxp, Bit#(1) rxn);
+    method Inout#(Bit#(1)) txp;
+    method Inout#(Bit#(1)) txn;
 endinterface
 
 (* synthesize *)
@@ -34,6 +38,12 @@ module mkTop(TopIfc);
     FIFOF#(Bit#(2)) rxFifo <- mkSizedFIFOF(100000);
     Wire#(Bit#(2)) rxFifoEnqW <- mkWire;
     Reg#(Bool) overflownOnce <- mkReg(False);
+
+    Reg#(Bool) tx_en_reg <- mkReg(False);
+    Reg#(Bit#(1)) txp_reg <- mkRegU;
+    Reg#(Bit#(1)) txn_reg <- mkRegU;
+    TriState#(Bit#(1)) txp_buf <- mkTriState(tx_en_reg, txp_reg);
+    TriState#(Bit#(1)) txn_buf <- mkTriState(tx_en_reg, txn_reg);
 
     AXI4_Slave_Xactor_IFC #(Wd_Slave_Id,
                             Wd_Addr,
@@ -88,6 +98,33 @@ module mkTop(TopIfc);
         slave_xactor.i_wr_resp.enq(wr_resp);
     endrule
 
+    Stmt stmt = seq
+        while(True) seq
+            action
+                txp_reg <= 1;
+                txn_reg <= 0;
+                tx_en_reg <= True;
+            endaction
+            delay(3);
+            action
+                tx_en_reg <= False;
+            endaction
+            delay(3);
+            action
+                txp_reg <= 0;
+                txn_reg <= 1;
+                tx_en_reg <= True;
+            endaction
+            delay(3);
+            action
+                tx_en_reg <= False;
+            endaction
+            delay(3+4);
+        endseq
+    endseq;
+
+    mkAutoFSM(stmt);
+
     interface AXI4_IFC axi;
         interface slave = slave_xactor.axi_side;
         method irq = rxFifo.notEmpty ? 1 : 0;
@@ -96,4 +133,7 @@ module mkTop(TopIfc);
     method Action put_rx(Bit#(1) rxp, Bit#(1) rxn);
         rxFifoEnqW <= {rxp, rxn};
     endmethod
+
+    method txp = txp_buf.io;
+    method txn = txn_buf.io;
 endmodule
