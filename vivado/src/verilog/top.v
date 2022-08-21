@@ -3,9 +3,9 @@
 `timescale 1ns / 1ps
 
 `define ZYNQ_CLK_PERIOD   8.0
-`define RC_CLK_MULT       39.125
-`define RC_CLK_DIVIDE     49.750
-`define RC_CLK_DIVIDE_CTR 6
+`define RC_CLK_MULT       6.750
+`define RC_CLK_DIVIDE     12.875
+`define RC_CLK_DIVIDE_CTR 1
 
 
 module top
