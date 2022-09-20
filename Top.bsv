@@ -35,9 +35,9 @@ endinterface
 
 (* synthesize *)
 module mkTop(TopIfc);
-    FIFOF#(Bit#(2)) rxFifo <- mkSizedFIFOF(100000);
+    FIFOF#(Bit#(2)) rxFifo <- mkSizedFIFOF(200000);
     Wire#(Bit#(2)) rxFifoEnqW <- mkWire;
-    Reg#(Bool) overflownOnce <- mkReg(False);
+    Reg#(Bool) overflownOnce[2] <- mkCReg(2, False);
 
     Reg#(Bool) tx_en_reg <- mkReg(False);
     Reg#(Bit#(1)) txp_reg <- mkRegU;
@@ -50,12 +50,12 @@ module mkTop(TopIfc);
                             Wd_Slave_Data,
                             Wd_User) slave_xactor  <- mkAXI4_Slave_Xactor;
 
-    rule rxFifo_enq(!overflownOnce);
+    rule rxFifo_enq(!overflownOnce[0]);
         rxFifo.enq(rxFifoEnqW);
     endrule
 
     rule rxFifo_flag_overlow(!rxFifo.notFull);
-        overflownOnce <= True;
+        overflownOnce[0] <= True;
     endrule
 
     rule slave_rd;
@@ -89,6 +89,10 @@ module mkTop(TopIfc);
         let addr = wr_addr.awaddr[11:2];
 
         // TODO: use data, addr for something
+        if (addr == 1) begin
+            rxFifo.clear;
+            overflownOnce[1] <= False;
+        end
 
         AXI4_Wr_Resp#(Wd_Slave_Id, Wd_User)
         wr_resp = AXI4_Wr_Resp {bid:   wr_addr.awid,
