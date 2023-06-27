@@ -16,6 +16,7 @@ class ZyboDriver:
             self.__irq_unmask()
         elif op == 'clear':
             self.mm[4:8] = b'\x01\x00\x00\x00'
+            sys.exit(0)
         else:
             raise ValueError(f'unsupported operation {op}')
 
@@ -31,6 +32,7 @@ class ZyboDriver:
             if elem == -1: break                      # fila vazia
             print(elem)
         self.__irq_unmask()
+        sys.exit(0)
 
     def __irq_unmask(self):
         os.write(self.fd, b'\x01\x00\x00\x00')
