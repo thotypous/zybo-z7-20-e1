@@ -1,29 +1,23 @@
 import os
+import sys
 import mmap
 import fcntl
 import struct
 import asyncio
-from collections import defaultdict
 
 
 class ZyboDriver:
-    def __init__(self, device='/dev/uio/user_io'):
+    def __init__(self, op, device='/dev/uio/user_io'):
         self.fd = os.open(device, os.O_RDWR)
         fcntl.fcntl(self.fd, fcntl.F_SETFL, os.O_NONBLOCK)
         self.mm = mmap.mmap(self.fd, 0x1000)
-        asyncio.get_event_loop().add_reader(self.fd, self.__irq_handler)
-        self.__irq_unmask()
-
-    def obter_porta(self, port):
-        """ Obtém uma porta para controlar a partir do software em Python """
-        return ZyboSerialPort(self, port)
-
-    def expor_porta_ao_linux(self, port):
-        """ Conecta uma porta a uma PTY para expô-la ao Linux """
-        pty = PTY()
-        pty.registrar_recebedor(lambda dados: self.enviar(port, dados))
-        self.registrar_recebedor(port, pty.enviar)
-        return pty
+        if op == 'read':
+            asyncio.get_event_loop().add_reader(self.fd, self.__irq_handler)
+            self.__irq_unmask()
+        elif op == 'clear':
+            self.mm[4:8] = b'\x01\x00\x00\x00'
+        else:
+            raise ValueError(f'unsupported operation {op}')
 
     def enviar(self, port, data):
         #print('send', port, data)
@@ -43,5 +37,5 @@ class ZyboDriver:
 
 
 if __name__ == '__main__':
-    driver = ZyboDriver()
+    driver = ZyboDriver(sys.argv[1])
     asyncio.get_event_loop().run_forever()
