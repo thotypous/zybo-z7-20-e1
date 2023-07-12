@@ -35,9 +35,10 @@ endinterface
 
 (* synthesize *)
 module mkTop(TopIfc);
-    FIFOF#(Bit#(2)) rxFifo <- mkSizedFIFOF(200000);
-    Wire#(Bit#(2)) rxFifoEnqW <- mkWire;
+    FIFOF#(Bit#(1)) rxFifo <- mkSizedFIFOF(20000);
+    Wire#(Bit#(1)) rxFifoEnqW <- mkWire;
     Reg#(Bool) overflownOnce[2] <- mkCReg(2, False);
+    Reg#(Bool) triggered[3] <- mkCReg(3, False);
 
     Reg#(Bool) tx_en_reg <- mkReg(False);
     Reg#(Bit#(1)) txp_reg <- mkRegU;
@@ -50,7 +51,11 @@ module mkTop(TopIfc);
                             Wd_Slave_Data,
                             Wd_User) slave_xactor  <- mkAXI4_Slave_Xactor;
 
-    rule rxFifo_enq(!overflownOnce[0]);
+    rule trigger(!overflownOnce[0] && rxFifoEnqW == 1'b1);
+        triggered[0] <= True;
+    endrule
+
+    rule rxFifo_enq(!overflownOnce[0] && triggered[1]);
         rxFifo.enq(rxFifoEnqW);
     endrule
 
@@ -92,6 +97,7 @@ module mkTop(TopIfc);
         if (addr == 1) begin
             rxFifo.clear;
             overflownOnce[1] <= False;
+            triggered[2] <= False;
         end
 
         AXI4_Wr_Resp#(Wd_Slave_Id, Wd_User)
@@ -135,7 +141,7 @@ module mkTop(TopIfc);
     endinterface
     
     method Action put_rx(Bit#(1) rxp, Bit#(1) rxn);
-        rxFifoEnqW <= {rxp, rxn};
+        rxFifoEnqW <= rxp;
     endmethod
 
     method txp = txp_buf.io;
