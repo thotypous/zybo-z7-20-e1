@@ -32,8 +32,6 @@ module top
     FIXED_IO_ps_srstb,
     rxp,
     rxn,
-    txp,
-    txn,
     clk);
 
   inout [14:0]DDR_addr;
@@ -61,8 +59,7 @@ module top
 
   input rxp;
   input rxn;
-  inout txp;
-  inout txn;
+  wire rx;
 
   input clk;
 
@@ -174,6 +171,14 @@ module top
 
   assign reset = !FCLK_RESET0_N || !mmcm_locked;
 
+  IBUFDS #(
+      .IOSTANDARD("LVDS_25")
+  ) IBUFDS_inst (
+      .I(rxp),
+      .IB(rxn),
+      .O(rx)
+  );
+
   mkTop mytop(
    .CLK(host_clk),
    .RST_N(!reset),
@@ -222,10 +227,7 @@ module top
 
    .axi_irq(irq),
 
-   .put_rx_rxp(rxp),
-   .put_rx_rxn(rxn),
-   .txp(txp),
-   .txn(txn)
+   .put_rx_rx(rx)
   );
   IBUFG ibufg_gclk (.I(clk), .O(gclk_i));
   BUFG  bufg_host_clk (.I(host_clk_i), .O(host_clk));
